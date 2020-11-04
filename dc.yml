@@ -1,0 +1,148 @@
+apiVersion: apps.openshift.io/v1
+kind: DeploymentConfig
+metadata:
+  creationTimestamp: null
+  generation: 2
+  name: jenkins-core
+spec:
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    app: jenkins-core
+    deploymentconfig: jenkins-core
+  strategy:
+    activeDeadlineSeconds: 21600
+    recreateParams:
+      timeoutSeconds: 600
+    resources: {}
+    type: Recreate
+  template:
+    metadata:
+      annotations:
+        openshift.io/generated-by: OpenShiftNewApp
+      creationTimestamp: null
+      labels:
+        app: jenkins-core
+        deploymentconfig: jenkins-core
+    spec:
+      containers:
+      - env:
+        - name: JAVA_OPTS
+          value: -Xms766m -Xmx900m -XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap
+            -XX:NewRatio=1 -XX:MaxMetaspaceSize=256m -server -XX:+ResizeTLAB -XX:+UseConcMarkSweepGC
+            -XX:+CMSConcurrentMTEnabled -XX:+CMSClassUnloadingEnabled -XX:+UseParNewGC
+            -XX:-OmitStackTraceInFastThrow -Djava.util.logging.config.file=/etc/java-8-openjdk/logging.properties
+        - name: COMPONENT_PROTOCOL
+          value: http
+        - name: COMPONENT_ADDRESS
+          value: jenkins-core
+        - name: COMPONENT_PORT
+          value: "8080"
+        - name: PORTAL_CONTEXT
+          value: Jenkins
+        - name: PORTAL_SEQUENCE
+          value: "0"
+        - name: CONTEXT_PATH
+          value: jenkins/
+        - name: PORTAL_OPENINWINDOW
+          value: "false"
+        - name: COMPONENT_TYPE
+          value: Functional
+        - name: PORTAL_WHITELIST
+          value: '[]'
+        - name: PORTAL_SUPPORTED
+          value: "true"
+        - name: PORTAL_GROUP
+          value: Jenkins
+        - name: LOGGING_PORT
+          value: "12201"
+        - name: LOGGING_HOSTNAME
+          value: graylog-core
+        - name: LOGGING_PROTOCOL
+          value: udp
+        - name: JENKINS_OPTS
+          value: --prefix=/jenkins
+        - name: JENKINS_ADMIN_MAIL
+        - name: JENKINS_HOME_URL
+          value: https://opentv.s2-eu.capgemini.com/jenkins
+        - name: PL_SIZE
+          value: "1"
+        - name: MICROPORTAL_TOKEN
+          value: E26IB8NV7PM
+        - name: TZ
+          value: Europe/Paris
+        - name: DEBUG_MODE
+          value: "false"
+        image: mrm.apps2.capgemini.com/mrm-apps2/productionline-release/jenkins-core@sha256:2889bd9e2b3a30aa0f3802f14241872ac5418e6adb84aece6a0773760b5973a1
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          exec:
+            command:
+            - /pl/healthcheck/healthcheck.sh
+          failureThreshold: 10
+          initialDelaySeconds: 15
+          periodSeconds: 15
+          successThreshold: 1
+          timeoutSeconds: 1
+        name: jenkins-core
+        ports:
+        - containerPort: 8080
+          protocol: TCP
+        resources:
+          limits:
+            memory: 2500Mi
+          requests:
+            memory: 2500Mi
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /home/pl
+          name: jenkins-core-volume
+          subPath: opentv/jenkins/jenkins_data
+        - mountPath: /pl/version
+          name: jenkins-core-volume
+          subPath: opentv/jenkins/version
+        - mountPath: /usr/share/jenkins
+          name: jenkins-core-volume
+          subPath: opentv/jenkins/share/jenkins
+        - mountPath: /usr/local/share/ca-certificates
+          name: jenkins-core-volume
+          subPath: opentv/jenkins/certs
+        - mountPath: /run/secrets/vars
+          name: jenkins-secret-volume
+          readOnly: true
+      dnsPolicy: ClusterFirst
+      nodeSelector:
+        region: mutualized-heavy
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - name: jenkins-core-volume
+        persistentVolumeClaim:
+          claimName: opentv
+      - name: jenkins-secret-volume
+        secret:
+          defaultMode: 420
+          secretName: jenkins-secret
+  test: false
+  triggers:
+  - type: ConfigChange
+  - imageChangeParams:
+      automatic: true
+      containerNames:
+      - jenkins-core
+      from:
+        kind: ImageStreamTag
+        name: jenkins-core:3.5-7
+        namespace: openshift
+      lastTriggeredImage: mrm.apps2.capgemini.com/mrm-apps2/productionline-release/jenkins-core@sha256:2889bd9e2b3a30aa0f3802f14241872ac5418e6adb84aece6a0773760b5973a1
+    type: ImageChange
+status:
+  availableReplicas: 0
+  latestVersion: 0
+  observedGeneration: 0
+  replicas: 0
+  unavailableReplicas: 0
+  updatedReplicas: 0
